@@ -1,0 +1,13 @@
+[package]
+name = "code_search"
+version = "0.1.0"
+authors = ["Alex Angelini <alex.louis.angelini@gmail.com>"]
+
+[dependencies]
+clippy = { git = "https://github.com/Manishearth/rust-clippy" }
+rocket = "0.2.8"
+rocket_contrib = "0.2.8"
+rocket_codegen = "0.2.8"
+serde = "0.9"
+serde_json = "0.9"
+serde_derive = "0.9"

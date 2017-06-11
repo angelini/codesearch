@@ -1,0 +1,55 @@
+#![feature(custom_derive, plugin)]
+#![plugin(clippy)]
+#![plugin(rocket_codegen)]
+
+#![allow(needless_pass_by_value)] // rocket matchers trigger false positives
+
+extern crate rocket;
+extern crate serde;
+extern crate serde_json;
+extern crate rocket_contrib;
+#[macro_use] extern crate serde_derive;
+
+mod base;
+mod ripgrep;
+
+use base::{Project, Snippet};
+use rocket::response::NamedFile;
+use rocket_contrib::JSON;
+use std::io;
+use std::path::{Path, PathBuf};
+
+#[derive(FromForm)]
+struct SearchQuery {
+    query: String,
+    above: Option<usize>,
+    below: Option<usize>,
+}
+
+#[get("/search/<project_id>?<query>")]
+fn search(project_id: usize, query: SearchQuery) -> JSON<Vec<Snippet>> {
+    let project = match project_id {
+        1 => Project::new(Path::new("/home/alex/src/code_search")),
+        2 => Project::new(Path::new("/home/alex/src/chess")),
+        _ => panic!("unknown project_id"),
+    };
+    let snippets = ripgrep::search(&project,
+                                   &query.query,
+                                   query.above.unwrap_or(2),
+                                   query.below.unwrap_or(2));
+    JSON(snippets)
+}
+
+#[get("/")]
+fn index() -> io::Result<NamedFile> {
+    NamedFile::open("static/index.html")
+}
+
+#[get("/static/<file..>")]
+fn files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file)).ok()
+}
+
+fn main() {
+    rocket::ignite().mount("/", routes![search, index, files]).launch();
+}

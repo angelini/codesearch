@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+	<meta charset="utf-8">
+    <title>Code Search</title>
+    <link rel="stylesheet" type="text/css" href="static/vendor/codemirror.css">
+    <link rel="stylesheet" type="text/css" href="static/style.css">
+  </head>
+  <body>
+    <div id="app">
+      <input v-on:keyup="search">
+      <p>{{ query }}</p>
+      <div v-for="group in grouped_snippets"
+           v-bind:key="group[0].file.path">
+        <div>{{ group[0].file.path }}</div>
+        <source-block v-for="snippet in group"
+                      v-bind:snippet="snippet"
+                      v-bind:key="snippet.line_number"></source-block>
+      </div>
+    </div>
+    <script src="static/vendor/underscore.js"></script>
+    <script src="static/vendor/vue.js"></script>
+    <script src="static/vendor/codemirror.js"></script>
+    <script src="static/vendor/modes/simple.js"></script>
+    <script src="static/vendor/modes/rust.js"></script>
+    <script src="static/main.js"></script>
+  </body>
+</html>
