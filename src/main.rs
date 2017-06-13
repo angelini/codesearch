@@ -19,6 +19,14 @@ use rocket_contrib::JSON;
 use std::io;
 use std::path::{Path, PathBuf};
 
+fn project_from_id(id: usize) -> Project {
+    match id {
+        1 => Project::new(Path::new("/home/alex/src/code_search")),
+        2 => Project::new(Path::new("/home/alex/src/chess")),
+        _ => panic!("unknown project_id"),
+    }
+}
+
 #[derive(FromForm)]
 struct SearchQuery {
     query: String,
@@ -28,16 +36,25 @@ struct SearchQuery {
 
 #[get("/search/<project_id>?<query>")]
 fn search(project_id: usize, query: SearchQuery) -> JSON<Vec<Snippet>> {
-    let project = match project_id {
-        1 => Project::new(Path::new("/home/alex/src/code_search")),
-        2 => Project::new(Path::new("/home/alex/src/chess")),
-        _ => panic!("unknown project_id"),
-    };
-    let snippets = ripgrep::search(&project,
+    let snippets = ripgrep::search(&project_from_id(project_id),
                                    &query.query,
                                    query.above.unwrap_or(2),
                                    query.below.unwrap_or(2));
     JSON(snippets)
+}
+
+#[derive(FromForm)]
+struct FileQuery {
+    file: String,
+    query: String,
+}
+
+#[get("/file/<project_id>?<query>")]
+fn file(project_id: usize, query: FileQuery) -> JSON<Snippet> {
+    let snippet = ripgrep::file(&project_from_id(project_id),
+                                &query.query,
+                                &query.file);
+    JSON(snippet)
 }
 
 #[get("/")]
@@ -51,5 +68,5 @@ fn files(file: PathBuf) -> Option<NamedFile> {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![search, index, files]).launch();
+    rocket::ignite().mount("/", routes![search, file, index, files]).launch();
 }

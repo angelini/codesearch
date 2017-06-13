@@ -67,6 +67,10 @@ Vue.component('search', {
   methods: {
     emitSearch: function() {
       this.$emit('search-request', this.$el.querySelector('input').value);
+    },
+    emitFile: function(event) {
+      console.log('emitting files', event.target.innerText);
+      this.$emit('file-request', event.target.innerText);
     }
   },
   template: `
@@ -74,29 +78,50 @@ Vue.component('search', {
   <input v-on:keyup="emitSearch">
   <div v-for="group in grouped_snippets"
        v-bind:key="group[0].file.path">
-    <div>{{ group[0].file.path }}</div>
-      <source-block v-for="snippet in group"
-                    v-bind:snippet="snippet"
-                    v-bind:key="snippet.hash"></source-block>
-    </div>
+    <div v-on:click="emitFile">{{ group[0].file.path }}</div>
+    <source-block v-for="snippet in group"
+                  v-bind:snippet="snippet"
+                  v-bind:key="snippet.hash"></source-block>
   </div>
 </div>
 `
 });
 
+Vue.component('files', {
+  props: ['snippets'],
+  template: `
+<div>
+  <div>{{ snippets }}</div>
+  <div v-for="snippet in snippets" v-key="snippet.path">
+    <source-block v-bind:snippet="snippet"></source-block>
+  </div>
+</div>`
+});
+
 let app = new Vue({
   el: '#app',
   data: {
+    files: {},
     snippets: []
   },
   methods: {
     search: function(query) {
+      console.log(app.files);
       if (query.length < 3) {
         return;
       }
       xhr_get('search/2?query=' + encodeURIComponent(query), (results) => {
         app.snippets = results;
       }, (status) => console.err(status));
+      _.each(_.keys(app.files), (file) => {
+        console.log('file', file);
+        xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(query),
+                (snippet) => app.$set(app.files, file, snippet),
+                (status) => console.err(status));
+      });
     },
+    addFile: function(file) {
+      app.files[file] = {file: file, lines: [], line_number: 0};
+    }
   }
 });

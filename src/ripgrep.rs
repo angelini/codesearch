@@ -4,20 +4,32 @@ use std::process::Command;
 use std::str;
 
 pub fn search(project: &Project, query: &str, above: usize, below: usize) -> Vec<Snippet> {
-    lines_to_snippets(project, rg_command(project, query, above, below))
+    lines_to_snippets(project,
+                      rg_command(project,
+                                 query,
+                                 &["-A", &above.to_string(), "-B", &below.to_string()]))
 }
 
-fn rg_command(project: &Project, query: &str, above: usize, below: usize) -> Vec<String> {
+pub fn file(project: &Project, query: &str, file: &str) -> Snippet {
+    let output = rg_command(project, file, &["-e", query, "-C", "10000"]);
+    let file_ref = FileRef::new(project, file);
+
+    if output.is_empty() {
+        lines_to_snippet(&file_ref,
+                         rg_command(project, file, &["-e", query, "-C", "10000"]))
+    } else {
+        lines_to_snippet(&file_ref, output)
+    }
+}
+
+fn rg_command(project: &Project, query: &str, args: &[&str]) -> Vec<String> {
     let result = Command::new("rg")
         .current_dir(&project.path)
         .arg("--color")
         .arg("always")
         .arg("--heading")
         .arg("-n")
-        .arg("-A")
-        .arg(above.to_string())
-        .arg("-B")
-        .arg(below.to_string())
+        .args(args)
         .arg(query)
         .output()
         .expect("rg failed");
@@ -40,8 +52,10 @@ fn parse_line(line: &str) -> Line {
             for _ in 0..12 {
                 char_idx = char_indices.next();
             }
-            let end = line[idx+12..].find("\u{1b}[m").expect("cannot find end of match") + idx + 12;
-            let match_str = &line[idx+12..end];
+            let end = line[idx + 12..]
+                .find("\u{1b}[m")
+                .expect("cannot find end of match") + idx + 12;
+            let match_str = &line[idx + 12..end];
             matches.push((full.len(), full.len() + match_str.len()));
             full.push_str(match_str);
             for _ in 0..(end - idx - 9) {
@@ -87,7 +101,7 @@ fn lines_to_snippets(project: &Project, raw_lines: Vec<String>) -> Vec<Snippet> 
             if lines.is_empty() {
                 line_number = *current_line_number;
             }
-            lines.push(parse_line(&raw_line[ln_end+4..]));
+            lines.push(parse_line(&raw_line[ln_end + 4..]));
         }
     }
     if !lines.is_empty() {
@@ -96,4 +110,17 @@ fn lines_to_snippets(project: &Project, raw_lines: Vec<String>) -> Vec<Snippet> 
                                    mem::replace(&mut file, None).unwrap()));
     }
     snippets
+}
+
+fn lines_to_snippet(file: &FileRef, raw_lines: Vec<String>) -> Snippet {
+    let mut lines: Vec<Line> = vec![];
+    for raw_line in raw_lines {
+        if raw_line.starts_with("\u{1b}[m\u{1b}[32m") {
+            let ln_end = raw_line[8..]
+                .find("\u{1b}[m")
+                .expect("cannot find end of line number") + 8;
+            lines.push(parse_line(&raw_line[ln_end + 4..]));
+        }
+    }
+    Snippet::new(lines, 0, file.clone())
 }

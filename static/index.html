@@ -9,7 +9,9 @@
   <body>
     <div id="app">
       <search v-bind:snippets="snippets"
-              v-on:search-request="search"></search>
+              v-on:search-request="search"
+              v-on:file-request="addFile"></search>
+      <files v-bind:snippets="files"></files>
     </div>
     <script src="static/vendor/underscore.js"></script>
     <script src="static/vendor/vue.js"></script>
