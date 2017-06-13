@@ -20,15 +20,15 @@ function xhr_get(uri, success, error) {
 
 Vue.component('source-block', {
   props: ['snippet'],
-  data: function() {
-    return {
-      code: _.map(this.snippet.lines, (line) => line.full)
-        .join('\n')
-    };
+  computed: {
+    code: function() {
+      return _.map(this.snippet.lines, (line) => line.full)
+        .join('\n');
+    }
   },
   mounted: function() {
     let line_number = this.snippet.line_number;
-    let cm = CodeMirror.fromTextArea(this.$el, {
+    let cm = CodeMirror.fromTextArea(this.$el.querySelector('textarea'), {
       lineNumbers: true,
       firstLineNumber: this.snippet.line_number,
       readOnly: true,
@@ -43,33 +43,59 @@ Vue.component('source-block', {
       });
     });
   },
-  updated: function() {
-    console.log('updated');
+  template: `
+<div>
+  <textarea>{{ code }}</textarea>
+</div>
+`
+});
+
+Vue.component('search', {
+  props: ['snippets'],
+  computed: {
+    grouped_snippets: function() {
+      return _.chain(this.snippets)
+        .groupBy((snippet) => snippet.file.path)
+        .mapObject((snippets) => {
+          return _.sortBy(snippets, (s) => s.line_number);
+        })
+        .values()
+        .sortBy((group) => group[0].file.path)
+        .value();
+    }
   },
-  template: '<textarea>{{ code }}</textarea>'
+  methods: {
+    emitSearch: function() {
+      this.$emit('search-request', this.$el.querySelector('input').value);
+    }
+  },
+  template: `
+<div>
+  <input v-on:keyup="emitSearch">
+  <div v-for="group in grouped_snippets"
+       v-bind:key="group[0].file.path">
+    <div>{{ group[0].file.path }}</div>
+      <source-block v-for="snippet in group"
+                    v-bind:snippet="snippet"
+                    v-bind:key="snippet.hash"></source-block>
+    </div>
+  </div>
+</div>
+`
 });
 
 let app = new Vue({
   el: '#app',
   data: {
-    query: '',
-    grouped_snippets: []
+    snippets: []
   },
   methods: {
-    search: function(event) {
-      app.query = event.target.value;
-      if (app.query.length < 3) {
+    search: function(query) {
+      if (query.length < 3) {
         return;
       }
-      xhr_get('search/2?query=' + encodeURIComponent(app.query), (results) => {
-        app.grouped_snippets = _.chain(results)
-          .groupBy((snippet) => snippet.file.path)
-          .mapObject((snippets) => {
-            return _.sortBy(snippets, (s) => s.line_number);
-          })
-          .values()
-          .sortBy((group) => group[0].file.path)
-          .value();
+      xhr_get('search/2?query=' + encodeURIComponent(query), (results) => {
+        app.snippets = results;
       }, (status) => console.err(status));
     },
   }

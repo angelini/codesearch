@@ -1,8 +1,17 @@
+:root {
+  --red: #ED6A5A;
+  --yellow: #F4F1BB;
+  --green: #9BC1BC;
+  --blue: #5CA4A9;
+  --beige: #E6EBE0;
+}
+
 .CodeMirror {
-  border: 1px solid #eee;
+  border: 1px solid var(--red);
+  margin: 1em 0;
   height: auto;
 }
 
 .highlight {
-  background-color: red;
+  background-color: var(--yellow);
 }

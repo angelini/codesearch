@@ -8,15 +8,8 @@
   </head>
   <body>
     <div id="app">
-      <input v-on:keyup="search">
-      <p>{{ query }}</p>
-      <div v-for="group in grouped_snippets"
-           v-bind:key="group[0].file.path">
-        <div>{{ group[0].file.path }}</div>
-        <source-block v-for="snippet in group"
-                      v-bind:snippet="snippet"
-                      v-bind:key="snippet.line_number"></source-block>
-      </div>
+      <search v-bind:snippets="snippets"
+              v-on:search-request="search"></search>
     </div>
     <script src="static/vendor/underscore.js"></script>
     <script src="static/vendor/vue.js"></script>
