@@ -25,6 +25,7 @@
 
 .header {
   height: 2em;
+  margin: 0.6em 0.3em;
   width: 100%;
 }
 
@@ -37,11 +38,12 @@
 }
 
 .box-title {
-  padding: 1em 0.5em 0 0.5em;
+  cursor: pointer;
+  padding: 0.5em 0.5em 0 0.5em;
 }
 
 .box-item {
-  padding: 0.5em;
+  padding: 0.2em 0.5em 0.5em 0.5em
 }
 
 .highlight {
@@ -50,6 +52,25 @@
 
 .search-input {
   height: 1.5em;
-  margin: 0.6em 0.3em;
   width: 25em;
+}
+
+.tags {
+  display: flex;
+  flex-flow: row;
+}
+
+.tags > div {
+  outline: 1px solid var(--grey);
+  margin-right: 0.5em;
+  padding: 0.5em;
+}
+
+.tags > div:hover {
+  background-color: var(--beige);
+  cursor: pointer;
+}
+
+.tags > div.selected {
+  background-color: var(--beige);
 }

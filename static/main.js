@@ -90,13 +90,36 @@ Vue.component('search', {
 
 Vue.component('files', {
   props: ['snippets'],
+  data: function() {
+    return {selected: ""};
+  },
+  methods: {
+    openFile: function(event) {
+      this.selected = event.target.innerText;
+      console.log('selected', this.selected);
+    }
+  },
+  watch: {
+    snippets: function() {
+      if (this.selected == "" && _.size(this.snippets) > 0) {
+        let key = _.keys(this.snippets)[0];
+        this.selected = this.snippets[key].file.path;
+      }
+    }
+  },
   template: `
 <div>
-  <div class="header"></div>
+  <div class="header tags">
+    <div v-for="(_, file) in snippets"
+         v-bind:key="file"
+         v-bind:class="file == selected ? 'selected' : ''"
+         v-on:click="openFile">{{ file }}</div>
+  </div>
   <div v-for="snippet in snippets"
+       v-if="snippet.file.path == selected"
        v-bind:key="snippet.hash"
        class="box">
-    <div class="box-title">{{ snippet.file.path }}</div>
+    <div class="box-title"></div>
     <source-block v-bind:snippet="snippet"></source-block>
   </div>
 </div>`
