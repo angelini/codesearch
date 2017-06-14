@@ -10,8 +10,10 @@
     <div id="app">
       <search v-bind:snippets="snippets"
               v-on:search-request="search"
-              v-on:file-request="addFile"></search>
-      <files v-bind:snippets="files"></files>
+              v-on:file-request="addFile"
+              class="container"></search>
+      <files v-bind:snippets="files"
+             class="container"></files>
     </div>
     <script src="static/vendor/underscore.js"></script>
     <script src="static/vendor/vue.js"></script>

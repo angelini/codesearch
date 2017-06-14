@@ -4,14 +4,52 @@
   --green: #9BC1BC;
   --blue: #5CA4A9;
   --beige: #E6EBE0;
+  --grey: #808080;
 }
 
 .CodeMirror {
   border: 1px solid var(--red);
-  margin: 1em 0;
   height: auto;
+  margin: 0;
+}
+
+#app {
+  display: flex;
+  flex-flow: row;
+}
+
+.container {
+  flex-grow: 1;
+  width: 50%;
+}
+
+.header {
+  height: 2em;
+  width: 100%;
+}
+
+.box {
+  background-color: var(--beige);
+  outline: 1px solid var(--grey);
+  display: flex;
+  flex-flow: column;
+  margin: 0.6em 0.3em;
+}
+
+.box-title {
+  padding: 1em 0.5em 0 0.5em;
+}
+
+.box-item {
+  padding: 0.5em;
 }
 
 .highlight {
   background-color: var(--yellow);
+}
+
+.search-input {
+  height: 1.5em;
+  margin: 0.6em 0.3em;
+  width: 25em;
 }

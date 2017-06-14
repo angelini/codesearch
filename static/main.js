@@ -36,7 +36,6 @@ Vue.component('source-block', {
     });
     _.each(this.snippet.lines, (line, idx) => {
       _.each(line.matches, (match) => {
-        console.log(idx, match[0], match[1]);
         cm.doc.markText({line: idx, ch: match[0]},
                         {line: idx, ch: match[1]},
                         {className: 'highlight'});
@@ -44,7 +43,7 @@ Vue.component('source-block', {
     });
   },
   template: `
-<div>
+<div class="box-item">
   <textarea>{{ code }}</textarea>
 </div>
 `
@@ -69,16 +68,18 @@ Vue.component('search', {
       this.$emit('search-request', this.$el.querySelector('input').value);
     },
     emitFile: function(event) {
-      console.log('emitting files', event.target.innerText);
       this.$emit('file-request', event.target.innerText);
     }
   },
   template: `
 <div>
-  <input v-on:keyup="emitSearch">
+  <div class="header">
+    <input v-on:keyup="emitSearch" class="search-input">
+  </div>
   <div v-for="group in grouped_snippets"
-       v-bind:key="group[0].file.path">
-    <div v-on:click="emitFile">{{ group[0].file.path }}</div>
+       v-bind:key="group[0].file.path"
+       class="box">
+    <div v-on:click="emitFile" class="box-title">{{ group[0].file.path }}</div>
     <source-block v-for="snippet in group"
                   v-bind:snippet="snippet"
                   v-bind:key="snippet.hash"></source-block>
@@ -91,8 +92,11 @@ Vue.component('files', {
   props: ['snippets'],
   template: `
 <div>
-  <div>{{ snippets }}</div>
-  <div v-for="snippet in snippets" v-key="snippet.path">
+  <div class="header"></div>
+  <div v-for="snippet in snippets"
+       v-bind:key="snippet.hash"
+       class="box">
+    <div class="box-title">{{ snippet.file.path }}</div>
     <source-block v-bind:snippet="snippet"></source-block>
   </div>
 </div>`
@@ -101,12 +105,13 @@ Vue.component('files', {
 let app = new Vue({
   el: '#app',
   data: {
+    query: "",
     files: {},
     snippets: []
   },
   methods: {
     search: function(query) {
-      console.log(app.files);
+      app.query = query;
       if (query.length < 3) {
         return;
       }
@@ -114,14 +119,19 @@ let app = new Vue({
         app.snippets = results;
       }, (status) => console.err(status));
       _.each(_.keys(app.files), (file) => {
-        console.log('file', file);
         xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(query),
                 (snippet) => app.$set(app.files, file, snippet),
                 (status) => console.err(status));
       });
     },
     addFile: function(file) {
-      app.files[file] = {file: file, lines: [], line_number: 0};
+      xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(app.query),
+              (snippet) => app.$set(app.files, file, snippet),
+              (status) => console.err(status));
     }
   }
+});
+
+addEventListener('keyup', function(event) {
+  document.querySelector('.search-input').focus();
 });
