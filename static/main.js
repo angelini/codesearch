@@ -1,7 +1,8 @@
 'use strict';
 
 const MODE_LOOKUP = {
-  'rs': 'rust'
+  'rs': 'rust',
+  'py': 'python',
 };
 
 function xhr_get(uri, success, error) {
