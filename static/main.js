@@ -146,17 +146,17 @@ let app = new Vue({
       if (query.length < 3) {
         return;
       }
-      xhr_get('search/2?query=' + encodeURIComponent(query), (results) => {
+      xhr_get('search/starscream?query=' + encodeURIComponent(query), (results) => {
         app.snippets = results;
       }, (status) => console.err(status));
       _.each(_.keys(app.files), (file) => {
-        xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(query),
+        xhr_get('file/starscream?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(query),
                 (snippet) => app.$set(app.files, file, snippet),
                 (status) => console.error(status));
       });
     },
     addFile: function(file) {
-      xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(app.query),
+      xhr_get('file/starscream?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(app.query),
               (snippet) => app.$set(app.files, file, snippet),
               (status) => console.error(status));
     }
