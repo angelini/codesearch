@@ -57,7 +57,13 @@ Vue.component('project-picker', {
   props: ['projects'],
   methods: {
     emitProject: function(event) {
-      this.$emit('change-project', event.target.parentElement.querySelector('dt').innerText);
+      var dl;
+      if (event.target.tagName == 'DL') {
+        dl = event.target;
+      } else {
+        dl = event.target.parentElement;
+      }
+      this.$emit('change-project', dl.querySelector('dt').innerText);
     }
   },
   template: `
@@ -243,11 +249,12 @@ let app = new Vue({
               (status) => console.error('file', status));
     },
     changeProject: function(project) {
-      console.log('project', project);
-      app.query = '';
       app.currentProject = project;
       app.files = {};
       app.snippets = [];
+      if (app.query != '') {
+        app.search(app.query);
+      }
     }
   }
 });
