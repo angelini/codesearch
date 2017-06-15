@@ -81,9 +81,12 @@ fn path_name(path: &Path) -> String {
 }
 
 fn extension(path: &Path) -> String {
-    path.extension()
-        .expect("cannot read extension")
-        .to_str()
-        .expect("cannot utf parse path name")
-        .to_string()
+    if let Some(extension) = path.extension() {
+        extension
+            .to_str()
+            .expect("cannot utf parse path name")
+            .to_string()
+    } else {
+        String::from("")
+    }
 }
