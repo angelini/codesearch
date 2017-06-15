@@ -16,7 +16,7 @@ pub fn file(project: &Project, query: &str, file: &str) -> Snippet {
 
     if output.is_empty() {
         lines_to_snippet(&file_ref,
-                         rg_command(project, file, &["-e", query, "-C", "10000"]))
+                         rg_command(project, file, &["-e", "", "-C", "10000"]))
     } else {
         lines_to_snippet(&file_ref, output)
     }

@@ -21,8 +21,8 @@ use std::path::{Path, PathBuf};
 
 fn project_from_id(id: usize) -> Project {
     match id {
-        1 => Project::new(Path::new("/home/alex/src/code_search")),
-        2 => Project::new(Path::new("/home/alex/src/chess")),
+        1 => Project::new(Path::new("/Users/alexangelini/src/github.com/angelini/codesearch")),
+        2 => Project::new(Path::new("/Users/alexangelini/src/github.com/Shopify/starscream/starscream")),
         _ => panic!("unknown project_id"),
     }
 }

@@ -74,16 +74,19 @@ Vue.component('search', {
   },
   template: `
 <div>
-  <div class="header">
+  <header>
     <input v-on:keyup="emitSearch" class="search-input">
-  </div>
-  <div v-for="group in grouped_snippets"
+  </header>
+  <div v-for="(group, group_idx) in grouped_snippets"
        v-bind:key="group[0].file.path"
        class="box">
     <div v-on:click="emitFile" class="box-title">{{ group[0].file.path }}</div>
-    <source-block v-for="snippet in group"
-                  v-bind:snippet="snippet"
-                  v-bind:key="snippet.hash"></source-block>
+    <div v-if="group_idx < 10">
+      <source-block v-for="(snippet, snippet_idx) in group"
+                    v-if="snippet_idx < 3"
+                    v-bind:snippet="snippet"
+                    v-bind:key="snippet.hash"></source-block>
+    </div>
   </div>
 </div>
 `
@@ -92,30 +95,34 @@ Vue.component('search', {
 Vue.component('files', {
   props: ['snippets'],
   data: function() {
-    return {selected: ""};
+    return {selected: "", seen: []};
   },
   methods: {
     openFile: function(event) {
       this.selected = event.target.innerText;
-      console.log('selected', this.selected);
     }
   },
   watch: {
     snippets: function() {
+      let files = _.keys(this.snippets);
+      let last = _.last(files);
       if (this.selected == "" && _.size(this.snippets) > 0) {
-        let key = _.keys(this.snippets)[0];
-        this.selected = this.snippets[key].file.path;
+        this.selected = last;
       }
+      if (!_.contains(this.seen, last)) {
+        this.selected = last;
+      }
+      this.seen = _.keys(this.snippets);
     }
   },
   template: `
 <div>
-  <div class="header tags">
+  <header class="tags">
     <div v-for="(_, file) in snippets"
          v-bind:key="file"
          v-bind:class="file == selected ? 'selected' : ''"
          v-on:click="openFile">{{ file }}</div>
-  </div>
+  </header>
   <div v-for="snippet in snippets"
        v-if="snippet.file.path == selected"
        v-bind:key="snippet.hash"
@@ -145,17 +152,19 @@ let app = new Vue({
       _.each(_.keys(app.files), (file) => {
         xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(query),
                 (snippet) => app.$set(app.files, file, snippet),
-                (status) => console.err(status));
+                (status) => console.error(status));
       });
     },
     addFile: function(file) {
       xhr_get('file/2?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(app.query),
               (snippet) => app.$set(app.files, file, snippet),
-              (status) => console.err(status));
+              (status) => console.error(status));
     }
   }
 });
 
-addEventListener('keyup', function(event) {
-  document.querySelector('.search-input').focus();
+addEventListener('keydown', function(event) {
+  if (event.code == 'Space' && event.ctrlKey) {
+    document.querySelector('.search-input').focus();
+  }
 });

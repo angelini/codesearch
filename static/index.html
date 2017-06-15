@@ -7,13 +7,15 @@
     <link rel="stylesheet" type="text/css" href="static/style.css">
   </head>
   <body>
-    <div id="app">
-      <search v-bind:snippets="snippets"
-              v-on:search-request="search"
-              v-on:file-request="addFile"
-              class="container"></search>
-      <files v-bind:snippets="files"
-             class="container"></files>
+    <div class="wrapper">
+      <div id="app">
+        <search v-bind:snippets="snippets"
+                v-on:search-request="search"
+                v-on:file-request="addFile"
+                class="container"></search>
+        <files v-bind:snippets="files"
+               class="container"></files>
+      </div>
     </div>
     <script src="static/vendor/underscore.js"></script>
     <script src="static/vendor/vue.js"></script>
