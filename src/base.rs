@@ -9,10 +9,10 @@ pub struct Project {
 }
 
 impl Project {
-    pub fn new(path: &Path) -> Project {
+    pub fn new(name: &str, path: &str) -> Project {
         Project {
-            name: path_name(path),
-            path: path.to_path_buf(),
+            name: String::from(name),
+            path: PathBuf::from(path),
         }
     }
 }

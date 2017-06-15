@@ -5,6 +5,7 @@
   --blue: #5CA4A9;
   --beige: #E6EBE0;
   --grey: #808080;
+  --light-grey: #C0C0C0;
 }
 
 html, body {
@@ -63,8 +64,50 @@ body {
   padding: 0.2em 0.5em 0.5em 0.5em
 }
 
+.dropdown {
+  background-color: white;
+  outline: 1px solid var(--grey);
+  width: 50%;
+  z-index: 100;
+}
+
+.dropdown dl {
+  margin: 0;
+  cursor: pointer;
+  padding: 0.5em;
+}
+
+.dropdown dl:hover {
+  background-color: var(--light-grey);
+}
+
+.dropdown dl dt {
+  width: 15%;
+}
+
+.dropdown dl dd {
+  margin: 0;
+  width: 80%;
+}
+
+.dropdown dl:first-child {
+  margin-top: 1em;
+}
+
+.dropdown dt, .dropdown dd {
+  display: inline-block;
+}
+
 .highlight {
   background-color: var(--yellow);
+}
+
+.project-toggle {
+  cursor: pointer;
+  font-size: 19px;
+  height: 32px;
+  margin-right: 0.2em;
+  width: 30px;
 }
 
 .search-input {

@@ -50,8 +50,27 @@ Vue.component('source-block', {
 `
 });
 
+Vue.component('project-picker', {
+  props: ['projects'],
+  methods: {
+    emitProject: function(event) {
+      this.$emit('change-project', event.target.parentElement.querySelector('dt').innerText);
+    }
+  },
+  template: `
+<div class="dropdown">
+  <dl v-for="project in projects"
+      v-bind:key="project.name"
+      v-on:click="emitProject">
+    <dt>{{ project.name }}</dt>
+    <dd>{{ project.path }}</dd>
+  </dl>
+</div>
+`
+});
+
 Vue.component('search', {
-  props: ['snippets'],
+  props: ['snippets', 'projects'],
   computed: {
     grouped_snippets: function() {
       return _.chain(this.snippets)
@@ -64,18 +83,34 @@ Vue.component('search', {
         .value();
     }
   },
+  data: function() {
+    return {showProjectPicker: false};
+  },
   methods: {
     emitSearch: function() {
       this.$emit('search-request', this.$el.querySelector('input').value);
     },
     emitFile: function(event) {
       this.$emit('file-request', event.target.innerText);
+    },
+    toggleProjectPicker: function() {
+      this.showProjectPicker = !this.showProjectPicker;
+    },
+    changeProject: function(project) {
+      this.showProjectPicker = false;
+      this.$emit('change-project', project);
     }
   },
   template: `
 <div>
   <header>
-    <input v-on:keyup="emitSearch" class="search-input">
+    <button v-on:click="toggleProjectPicker"
+            class="project-toggle">+</button>
+    <input v-on:keyup="emitSearch"
+           class="search-input">
+    <project-picker v-if="showProjectPicker"
+                    v-bind:projects="projects"
+                    v-on:change-project="changeProject"></project-picker>
   </header>
   <div v-for="(group, group_idx) in grouped_snippets"
        v-bind:key="group[0].file.path"
@@ -133,12 +168,25 @@ Vue.component('files', {
 </div>`
 });
 
+function buildSearchURI(project, query) {
+  return 'search/' + project +
+    '?query=' + encodeURIComponent(query);
+}
+
+function buildFileURI(project, file, query) {
+  return 'file/' + project +
+    '?file=' + encodeURIComponent(file) +
+    '&query=' + encodeURIComponent(query);
+}
+
 let app = new Vue({
   el: '#app',
   data: {
-    query: "",
+    query: '',
+    currentProject: null,
+    projects: [],
     files: {},
-    snippets: []
+    snippets: [],
   },
   methods: {
     search: function(query) {
@@ -146,25 +194,42 @@ let app = new Vue({
       if (query.length < 3) {
         return;
       }
-      xhr_get('search/starscream?query=' + encodeURIComponent(query), (results) => {
-        app.snippets = results;
-      }, (status) => console.err(status));
+      xhr_get(buildSearchURI(app.currentProject, query),
+              (results) => app.snippets = results,
+              (status) => console.error('search', status));
+
       _.each(_.keys(app.files), (file) => {
-        xhr_get('file/starscream?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(query),
+        xhr_get(buildFileURI(app.currentProject, file, query),
                 (snippet) => app.$set(app.files, file, snippet),
-                (status) => console.error(status));
+                (status) => console.error('file', status));
       });
     },
     addFile: function(file) {
-      xhr_get('file/starscream?file=' + encodeURIComponent(file) + '&query=' + encodeURIComponent(app.query),
+      xhr_get(buildFileURI(app.currentProject, file, app.query),
               (snippet) => app.$set(app.files, file, snippet),
-              (status) => console.error(status));
+              (status) => console.error('file', status));
+    },
+    changeProject: function(project) {
+      console.log('project', project);
+      app.query = '';
+      app.currentProject = project;
+      app.files = {};
+      app.snippets = [];
     }
   }
 });
+
+xhr_get('/projects',
+        (projects) => {
+          app.currentProject = projects[0].name;
+          app.projects = projects;
+        },
+        (status) => console.error('projects', status));
 
 addEventListener('keydown', function(event) {
   if (event.code == 'Space' && event.ctrlKey) {
     document.querySelector('.search-input').focus();
   }
 });
+
+document.querySelector('.search-input').focus();

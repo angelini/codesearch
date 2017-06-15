@@ -10,8 +10,10 @@
     <div class="wrapper">
       <div id="app">
         <search v-bind:snippets="snippets"
+                v-bind:projects="projects"
                 v-on:search-request="search"
                 v-on:file-request="addFile"
+                v-on:change-project="changeProject"
                 class="container"></search>
         <files v-bind:snippets="files"
                class="container"></files>
