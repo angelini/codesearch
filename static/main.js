@@ -72,8 +72,40 @@ Vue.component('project-picker', {
 `
 });
 
+Vue.component('search-result-group', {
+  props: ['group', 'expanded'],
+  computed: {
+    file: function() {
+      return this.group[0].file.path;
+    }
+  },
+  data: function() {
+    return {toShow: this.expanded ? 3 : 0};
+  },
+  methods: {
+    emitFile: function() {
+      this.$emit('file-request', this.file);
+    },
+    showMore: function() {
+      this.toShow += 3;
+    }
+  },
+  template: `
+<div class="box">
+  <div v-on:click="emitFile" class="box-title">{{ file }}</div>
+  <source-block v-for="(snippet, snippet_idx) in group"
+                v-if="snippet_idx < toShow"
+                v-bind:snippet="snippet"
+                v-bind:key="snippet.hash"></source-block>
+  <div v-if="group.length > toShow"
+       v-on:click="showMore"
+       class="rest">...</div>
+</div>
+`
+});
+
 Vue.component('search', {
-  props: ['snippets', 'projects'],
+  props: ['snippets', 'projects', 'currentProject'],
   computed: {
     grouped_snippets: function() {
       return _.chain(this.snippets)
@@ -93,15 +125,17 @@ Vue.component('search', {
     emitSearch: function() {
       this.$emit('search-request', this.$el.querySelector('input').value);
     },
-    emitFile: function(event) {
-      this.$emit('file-request', event.target.innerText);
+    emitFile: function(file) {
+      this.$emit('file-request', file);
     },
     toggleProjectPicker: function() {
       this.showProjectPicker = !this.showProjectPicker;
     },
     changeProject: function(project) {
       this.showProjectPicker = false;
-      this.$emit('change-project', project);
+      if (project != this.currentProject) {
+        this.$emit('change-project', project);
+      }
     }
   },
   template: `
@@ -109,23 +143,19 @@ Vue.component('search', {
   <header>
     <button v-on:click="toggleProjectPicker"
             class="project-toggle">+</button>
+    <span class="italic">{{ currentProject }}</span>
     <input v-on:keyup="emitSearch"
+           type="text"
            class="search-input">
     <project-picker v-if="showProjectPicker"
                     v-bind:projects="projects"
                     v-on:change-project="changeProject"></project-picker>
   </header>
-  <div v-for="(group, group_idx) in grouped_snippets"
-       v-bind:key="group[0].file.path"
-       class="box">
-    <div v-on:click="emitFile" class="box-title">{{ group[0].file.path }}</div>
-    <div v-if="group_idx < 10">
-      <source-block v-for="(snippet, snippet_idx) in group"
-                    v-if="snippet_idx < 3"
-                    v-bind:snippet="snippet"
-                    v-bind:key="snippet.hash"></source-block>
-    </div>
-  </div>
+  <search-result-group v-for="(group, group_idx) in grouped_snippets"
+                       v-bind:key="group[0].hash"
+                       v-bind:group="group"
+                       v-bind:expanded="group_idx < 10"
+                       v-on:file-request="emitFile"></search-result-group>
 </div>
 `
 });
@@ -224,8 +254,9 @@ let app = new Vue({
 
 xhr_get('/projects',
         (projects) => {
-          app.currentProject = projects[0].name;
-          app.projects = projects;
+          let sorted = _.sortBy(projects, (project) => project.name);
+          app.currentProject = sorted[0].name;
+          app.projects = sorted;
         },
         (status) => console.error('projects', status));
 

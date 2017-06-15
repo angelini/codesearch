@@ -16,6 +16,18 @@ body {
   margin: 0;
 }
 
+input[type="text"] {
+  margin: 0;
+  box-shadow: none;
+  border: solid 3px var(--light-grey);
+  transition: border 0.3s;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border: solid 3px var(--blue);
+}
+
 .wrapper {
   display: flex;
   height: 100vh;
@@ -53,6 +65,13 @@ body {
   display: flex;
   flex-flow: column;
   margin: 0.6em 0.6em;
+}
+
+.box .rest {
+  cursor: pointer;
+  font-size: 20px;
+  margin-bottom: 0.5em;
+  text-align: center;
 }
 
 .box-title {
@@ -102,6 +121,11 @@ body {
   background-color: var(--yellow);
 }
 
+.italic {
+  font-size: 18px;
+  font-style: italic;
+}
+
 .project-toggle {
   cursor: pointer;
   font-size: 19px;
@@ -110,8 +134,9 @@ body {
   width: 30px;
 }
 
-.search-input {
+input.search-input {
   font-size: 16px;
+  margin-left: 1em;
   padding: 0.4em;
   width: 30em;
 }

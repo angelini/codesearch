@@ -11,6 +11,7 @@
       <div id="app">
         <search v-bind:snippets="snippets"
                 v-bind:projects="projects"
+                v-bind:current-project="currentProject"
                 v-on:search-request="search"
                 v-on:file-request="addFile"
                 v-on:change-project="changeProject"
