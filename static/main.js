@@ -1,8 +1,11 @@
 'use strict';
 
 const MODE_LOOKUP = {
-  'rs': 'rust',
+  'java': 'text/x-java',
+  'js': 'javascript',
   'py': 'python',
+  'rs': 'rust',
+  'scala': 'text/x-scala',
 };
 
 function xhr_get(uri, success, error) {
