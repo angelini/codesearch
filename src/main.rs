@@ -32,10 +32,14 @@ struct Config {
 impl Config {
     fn project_from_name(&self, name: &str) -> Option<Project> {
         if let Some(path) = self.projects.get(name) {
-            Some(Project::new(Path::new(path)))
+            Some(Project::new(name, path))
         } else {
             None
         }
+    }
+
+    fn project_list(&self) -> Vec<Project> {
+        self.projects.iter().map(|(name, path)| Project::new(name, path)).collect()
     }
 }
 
@@ -79,6 +83,11 @@ fn file(config: State<Config>, project: String, query: FileQuery) -> JSON<Snippe
     JSON(snippet)
 }
 
+#[get("/projects")]
+fn projects(config: State<Config>) -> JSON<Vec<Project>> {
+    JSON(config.project_list())
+}
+
 #[get("/")]
 fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
@@ -93,5 +102,5 @@ fn main() {
     let config = read_config(Path::new("config.toml"));
     rocket::ignite()
         .manage(config.unwrap())
-        .mount("/", routes![search, file, index, files]).launch();
+        .mount("/", routes![search, file, projects, index, files]).launch();
 }
