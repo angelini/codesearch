@@ -49,7 +49,7 @@ impl Snippet {
     pub fn new(lines: Vec<Line>, line_number: usize, file: FileRef) -> Snippet {
         let mut hasher = DefaultHasher::new();
         for line in &lines {
-            line.hash(&mut hasher);
+            line.full.hash(&mut hasher);
         }
         Snippet {
             lines: lines,
@@ -60,7 +60,7 @@ impl Snippet {
     }
 }
 
-#[derive(Debug, Deserialize, Hash, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Line {
     pub full: String,
     pub matches: Vec<(usize, usize)>,
