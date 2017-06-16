@@ -1,28 +1,45 @@
 use base::{FileRef, Line, Project, Snippet};
+use std::fs::File;
+use std::io;
+use std::io::prelude::Read;
 use std::mem;
 use std::process::Command;
 use std::str;
 
-pub fn search(project: &Project, query: &str, above: usize, below: usize) -> Vec<Snippet> {
-    lines_to_snippets(project,
+pub fn search(project: &Project,
+              query: &str,
+              above: usize,
+              below: usize)
+              -> Result<Vec<Snippet>, io::Error> {
+    Ok(lines_to_snippets(project,
                       rg_command(project,
                                  query,
-                                 &["-A", &above.to_string(), "-B", &below.to_string()]))
+                                 &["-A", &above.to_string(), "-B", &below.to_string()])?))
 }
 
-pub fn file(project: &Project, query: &str, file: &str) -> Snippet {
-    let output = rg_command(project, file, &["-e", query, "-C", "10000"]);
+pub fn file(project: &Project, query: &str, file: &str) -> io::Result<Snippet> {
+    let output = rg_command(project, file, &["-e", query, "-C", "10000"])?;
     let file_ref = FileRef::new(project, file);
 
     if output.is_empty() {
-        lines_to_snippet(&file_ref,
-                         rg_command(project, file, &["-e", "", "-C", "10000"]))
+        let lines = read_file(project, &file_ref)?
+            .into_iter()
+            .map(|line| Line::new(line, vec![]))
+            .collect();
+        Ok(Snippet::new(lines, 0, file_ref))
     } else {
-        lines_to_snippet(&file_ref, output)
+        Ok(lines_to_snippet(&file_ref, output))
     }
 }
 
-fn rg_command(project: &Project, query: &str, args: &[&str]) -> Vec<String> {
+fn read_file(project: &Project, file_ref: &FileRef) -> io::Result<Vec<String>> {
+    let mut file = File::open(&project.path.join(&file_ref.path))?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents.split('\n').map(String::from).collect())
+}
+
+fn rg_command(project: &Project, query: &str, args: &[&str]) -> io::Result<Vec<String>> {
     let result = Command::new("rg")
         .current_dir(&project.path)
         .arg("--color")
@@ -31,14 +48,12 @@ fn rg_command(project: &Project, query: &str, args: &[&str]) -> Vec<String> {
         .arg("-n")
         .args(args)
         .arg(query)
-        .output()
-        .expect("rg failed");
-    str::from_utf8(&result.stdout)
-        .expect("failed to utf8 parse output")
-        .split('\n')
-        .filter(|&l| !l.is_empty())
-        .map(|l| l.to_string())
-        .collect()
+        .output()?;
+    Ok(String::from_utf8_lossy(&result.stdout)
+           .split('\n')
+           .filter(|&l| !l.is_empty())
+           .map(|l| l.to_string())
+           .collect())
 }
 
 fn parse_line(line: &str) -> Line {

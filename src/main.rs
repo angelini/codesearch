@@ -61,12 +61,12 @@ struct SearchQuery {
 }
 
 #[get("/search/<project>?<query>")]
-fn search(config: State<Config>, project: String, query: SearchQuery) -> JSON<Vec<Snippet>> {
+fn search(config: State<Config>, project: String, query: SearchQuery) -> io::Result<JSON<Vec<Snippet>>> {
     let snippets = ripgrep::search(&config.project_from_name(&project).unwrap(),
                                    &query.query,
                                    query.above.unwrap_or(2),
                                    query.below.unwrap_or(2));
-    JSON(snippets)
+    Ok(JSON(snippets?))
 }
 
 #[derive(FromForm)]
@@ -76,11 +76,11 @@ struct FileQuery {
 }
 
 #[get("/file/<project>?<query>")]
-fn file(config: State<Config>, project: String, query: FileQuery) -> JSON<Snippet> {
+fn file(config: State<Config>, project: String, query: FileQuery) -> io::Result<JSON<Snippet>> {
     let snippet = ripgrep::file(&config.project_from_name(&project).unwrap(),
                                 &query.query,
                                 &query.file);
-    JSON(snippet)
+    Ok(JSON(snippet?))
 }
 
 #[get("/projects")]
