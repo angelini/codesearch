@@ -283,6 +283,7 @@ let app = new Vue({
       if (app.query != '') {
         app.search(app.query);
       }
+      localStorage.setItem('project', project);
     }
   }
 });
@@ -290,8 +291,12 @@ let app = new Vue({
 xhr_get('/projects',
         (projects) => {
           let sorted = _.sortBy(projects, (project) => project.name);
-          app.currentProject = sorted[0].name;
           app.projects = sorted;
+          if ('project' in localStorage) {
+            app.currentProject = localStorage['project'];
+          } else {
+            app.currentProject = sorted[0].name;
+          }
         },
         (status) => console.error('projects', status));
 
