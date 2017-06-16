@@ -145,7 +145,10 @@ Vue.component('search', {
     return {showProjectPicker: false};
   },
   methods: {
-    emitSearch: function() {
+    emitSearch: function(event) {
+      if (['Control', 'Meta', 'Shift'].includes(event.key)) {
+        return;
+      }
       this.$emit('search-request', this.$el.querySelector('input').value);
     },
     emitFile: function(file) {
