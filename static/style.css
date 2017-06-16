@@ -1,4 +1,5 @@
 :root {
+  --font: 'Roboto Mono', monospace;
   --red: #ED6A5A;
   --yellow: #F4F1BB;
   --green: #9BC1BC;
@@ -13,10 +14,13 @@ html, body {
 }
 
 body {
+  font-family: var(--font);
+  font-size: 15px;
   margin: 0;
 }
 
 input[type="text"] {
+  font-family: var(--font);
   margin: 0;
   box-shadow: none;
   border: solid 3px var(--light-grey);
@@ -105,12 +109,12 @@ input[type="text"]:focus {
 }
 
 .dropdown dl dt {
-  width: 15%;
+  width: 20%;
 }
 
 .dropdown dl dd {
   margin: 0;
-  width: 80%;
+  width: 75%;
 }
 
 .dropdown dt, .dropdown dd {
@@ -137,7 +141,7 @@ input[type="text"]:focus {
 input.search-input {
   font-size: 16px;
   margin-left: 1em;
-  padding: 0.4em;
+  padding: 0.2em;
   width: 30%;
 }
 
@@ -163,6 +167,7 @@ input.search-input {
 
 .CodeMirror {
   border: 1px solid var(--red);
+  font-family: var(--font);
   height: auto;
   margin: 0;
 }
