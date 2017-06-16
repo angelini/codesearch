@@ -28,7 +28,14 @@ Vue.component('source-block', {
     code: function() {
       return _.map(this.snippet.lines, (line) => line.full)
         .join('\n');
+    },
+    matches: function() {
+      return _.map(this.snippet.matches, (match) => match)
+        .join(', ');
     }
+  },
+  data: function() {
+    return {cm: null};
   },
   mounted: function() {
     let line_number = this.snippet.line_number;
@@ -45,9 +52,21 @@ Vue.component('source-block', {
                         {className: 'highlight'});
       });
     });
+    this.cm = cm;
+  },
+  updated: function() {
+    _.each(this.cm.doc.getAllMarks(), (mark) => mark.clear());
+    _.each(this.snippet.lines, (line, idx) => {
+      _.each(line.matches, (match) => {
+        this.cm.doc.markText({line: idx, ch: match[0]},
+                             {line: idx, ch: match[1]},
+                             {className: 'highlight'});
+      });
+    });
   },
   template: `
 <div class="box-item">
+  <div>{{ matches }}</div>
   <textarea>{{ code }}</textarea>
 </div>
 `
@@ -96,6 +115,16 @@ Vue.component('search-result-group', {
       this.toShow += 3;
     }
   },
+  watch: {
+    expanded: function() {
+      if (this.expanded && this.toShow < 3) {
+        this.toShow = 3;
+      }
+      if (!this.expanded && this.toShow > 0) {
+        this.toShow = 0;
+      }
+    }
+  },
   template: `
 <div class="box">
   <div v-on:click="emitFile" class="box-title">{{ file }}</div>
@@ -111,19 +140,7 @@ Vue.component('search-result-group', {
 });
 
 Vue.component('search', {
-  props: ['snippets', 'projects', 'currentProject'],
-  computed: {
-    grouped_snippets: function() {
-      return _.chain(this.snippets)
-        .groupBy((snippet) => snippet.file.path)
-        .mapObject((snippets) => {
-          return _.sortBy(snippets, (s) => s.line_number);
-        })
-        .values()
-        .sortBy((group) => group[0].file.path)
-        .value();
-    }
-  },
+  props: ['groupedSnippets', 'projects', 'currentProject'],
   data: function() {
     return {showProjectPicker: false};
   },
@@ -148,7 +165,7 @@ Vue.component('search', {
 <div>
   <header>
     <button v-on:click="toggleProjectPicker"
-            class="project-toggle">+</button>
+            class="project-toggle">></button>
     <span class="italic">{{ currentProject }}</span>
     <input v-on:keyup="emitSearch"
            type="text"
@@ -157,8 +174,8 @@ Vue.component('search', {
                     v-bind:projects="projects"
                     v-on:change-project="changeProject"></project-picker>
   </header>
-  <search-result-group v-for="(group, group_idx) in grouped_snippets"
-                       v-bind:key="group[0].hash"
+  <search-result-group v-for="(group, group_idx) in groupedSnippets"
+                       v-bind:key="group[0].file.path"
                        v-bind:group="group"
                        v-bind:expanded="group_idx < 10"
                        v-on:file-request="emitFile"></search-result-group>
@@ -218,6 +235,17 @@ function buildFileURI(project, file, query) {
     '&query=' + encodeURIComponent(query);
 }
 
+function groupSnippets(snippets) {
+  return _.chain(snippets)
+    .groupBy((snippet) => snippet.file.path)
+    .mapObject((snippets) => {
+      return _.sortBy(snippets, (s) => s.line_number);
+    })
+    .values()
+    .sortBy((group) => group[0].file.path)
+    .value();
+}
+
 let app = new Vue({
   el: '#app',
   data: {
@@ -225,7 +253,7 @@ let app = new Vue({
     currentProject: null,
     projects: [],
     files: {},
-    snippets: [],
+    groupedSnippets: {},
   },
   methods: {
     search: function(query) {
@@ -234,7 +262,7 @@ let app = new Vue({
         return;
       }
       xhr_get(buildSearchURI(app.currentProject, query),
-              (results) => app.snippets = results,
+              (results) => app.groupedSnippets = groupSnippets(results),
               (status) => console.error('search', status));
 
       _.each(_.keys(app.files), (file) => {
@@ -251,7 +279,7 @@ let app = new Vue({
     changeProject: function(project) {
       app.currentProject = project;
       app.files = {};
-      app.snippets = [];
+      app.groupedSnippets = {};
       if (app.query != '') {
         app.search(app.query);
       }
