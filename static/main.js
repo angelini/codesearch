@@ -22,6 +22,10 @@ function xhr_get(uri, success, error) {
   xhr.send();
 }
 
+function idx_xhr_get(idx, uri, success, error) {
+  xhr_get(uri, (result) => success(idx, result), error);
+}
+
 Vue.component('source-block', {
   props: ['snippet'],
   computed: {
@@ -257,15 +261,24 @@ let app = new Vue({
     projects: [],
     files: {},
     groupedSnippets: {},
+    requestIndexes: {search: 0, file: 0},
   },
   methods: {
+    nextId: function(key) {
+      return this.requestIndexes[key] += 1;
+    },
     search: function(query) {
       app.query = query;
       if (query.length < 3) {
         return;
       }
-      xhr_get(buildSearchURI(app.currentProject, query),
-              (results) => app.groupedSnippets = groupSnippets(results),
+      idx_xhr_get(app.nextId('search'), buildSearchURI(app.currentProject, query),
+              (idx, results) => {
+                if (idx == app.requestIndexes.search) {
+                  app.groupedSnippets = groupSnippets(results);
+                  app.requestIndexes.search = idx;
+                }
+              },
               (status) => console.error('search', status));
 
       _.each(_.keys(app.files), (file) => {
