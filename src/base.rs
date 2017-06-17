@@ -38,29 +38,6 @@ impl FileRef {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Snippet {
-    pub lines: Vec<Line>,
-    pub line_number: usize,
-    pub file: FileRef,
-    pub hash: u64,
-}
-
-impl Snippet {
-    pub fn new(lines: Vec<Line>, line_number: usize, file: FileRef) -> Snippet {
-        let mut hasher = DefaultHasher::new();
-        for line in &lines {
-            line.full.hash(&mut hasher);
-        }
-        Snippet {
-            lines: lines,
-            line_number: line_number,
-            file: file,
-            hash: hasher.finish(),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct Line {
     pub full: String,
     pub matches: Vec<(usize, usize)>,
@@ -69,6 +46,54 @@ pub struct Line {
 impl Line {
     pub fn new(full: String, matches: Vec<(usize, usize)>) -> Line {
         Line { full, matches }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Snippet {
+    pub lines: Vec<Line>,
+    pub line_number: usize,
+    pub hash: u64,
+}
+
+impl Snippet {
+    pub fn new(lines: Vec<Line>, line_number: usize) -> Snippet {
+        let mut hasher = DefaultHasher::new();
+        for line in &lines {
+            line.full.hash(&mut hasher);
+        }
+        Snippet {
+            lines: lines,
+            line_number: line_number,
+            hash: hasher.finish(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FileSnippets {
+    pub file: FileRef,
+    pub snippets: Vec<Snippet>,
+    pub match_count: usize,
+    pub truncated: bool,
+}
+
+impl FileSnippets {
+    pub fn new(file: FileRef, mut snippets: Vec<Snippet>) -> FileSnippets {
+        let match_count = snippets.iter()
+            .map(|snippet| snippet.lines.iter().fold(0, |acc, l| acc + l.matches.len()))
+            .sum();
+        snippets.sort_by(|left, right| left.line_number.cmp(&right.line_number));
+        FileSnippets {file, snippets, match_count, truncated: false}
+    }
+
+    pub fn truncate(&self) -> FileSnippets {
+        FileSnippets {
+            file: self.file.clone(),
+            snippets: vec![],
+            match_count: self.match_count,
+            truncated: true
+        }
     }
 }
 

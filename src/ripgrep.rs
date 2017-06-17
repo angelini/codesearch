@@ -1,4 +1,4 @@
-use base::{FileRef, Line, Project, Snippet};
+use base::{FileRef, FileSnippets, Line, Project, Snippet};
 use std::fs::File;
 use std::io;
 use std::io::prelude::Read;
@@ -11,7 +11,7 @@ pub fn search(project: &Project,
               file_filter: &str,
               above: usize,
               below: usize)
-              -> Result<Vec<Snippet>, io::Error> {
+              -> io::Result<Vec<FileSnippets>> {
     Ok(lines_to_snippets(project,
                          rg_command(project,
                                     query,
@@ -23,19 +23,19 @@ pub fn search(project: &Project,
                                       &below.to_string()])?))
 }
 
-pub fn file(project: &Project, query: &str, file: &str) -> io::Result<Snippet> {
+pub fn file(project: &Project, query: &str, file: &str) -> io::Result<FileSnippets> {
     let output = rg_command(project, file, &["-e", query, "-C", "10000"])?;
     let file_ref = FileRef::new(project, file);
-
-    if output.is_empty() {
+    let snippet = if output.is_empty() {
         let lines = read_file(project, &file_ref)?
             .into_iter()
             .map(|line| Line::new(line, vec![]))
             .collect();
-        Ok(Snippet::new(lines, 0, file_ref))
+        Snippet::new(lines, 0)
     } else {
-        Ok(lines_to_snippet(&file_ref, output))
-    }
+        lines_to_snippet(output)
+    };
+    Ok(FileSnippets::new(file_ref, vec![snippet]))
 }
 
 fn read_file(project: &Project, file_ref: &FileRef) -> io::Result<Vec<String>> {
@@ -90,7 +90,8 @@ fn parse_line(line: &str) -> Line {
     Line::new(full, matches)
 }
 
-fn lines_to_snippets(project: &Project, raw_lines: Vec<String>) -> Vec<Snippet> {
+fn lines_to_snippets(project: &Project, raw_lines: Vec<String>) -> Vec<FileSnippets> {
+    let mut file_snippets = vec![];
     let mut snippets = vec![];
     let mut lines: Vec<Line> = vec![];
     let mut line_number = 0;
@@ -98,17 +99,16 @@ fn lines_to_snippets(project: &Project, raw_lines: Vec<String>) -> Vec<Snippet> 
 
     for raw_line in raw_lines {
         if raw_line == "--" {
-            snippets.push(Snippet::new(mem::replace(&mut lines, vec![]),
-                                       line_number,
-                                       file.clone().expect("file not identified")));
+            snippets.push(Snippet::new(mem::replace(&mut lines, vec![]), line_number));
             line_number = 0;
         }
         if raw_line.starts_with("\u{1b}[m\u{1b}[35m") {
             let new_file = Some(FileRef::new(project, &raw_line[8..raw_line.len() - 3]));
             if !lines.is_empty() {
-                snippets.push(Snippet::new(mem::replace(&mut lines, vec![]),
-                                           line_number,
-                                           mem::replace(&mut file, new_file).unwrap()));
+                snippets.push(Snippet::new(mem::replace(&mut lines, vec![]), line_number));
+                file_snippets.push(FileSnippets::new(mem::replace(&mut file, new_file).expect("file not found"),
+                                                     mem::replace(&mut snippets, vec![])));
+
                 line_number = 0;
             } else {
                 file = new_file
@@ -126,14 +126,15 @@ fn lines_to_snippets(project: &Project, raw_lines: Vec<String>) -> Vec<Snippet> 
         }
     }
     if !lines.is_empty() {
-        snippets.push(Snippet::new(mem::replace(&mut lines, vec![]),
-                                   line_number,
-                                   mem::replace(&mut file, None).unwrap()));
+        snippets.push(Snippet::new(mem::replace(&mut lines, vec![]), line_number));
+        file_snippets.push(FileSnippets::new(mem::replace(&mut file, None).expect("file not found"),
+                                             mem::replace(&mut snippets, vec![])));
+
     }
-    snippets
+    file_snippets
 }
 
-fn lines_to_snippet(file: &FileRef, raw_lines: Vec<String>) -> Snippet {
+fn lines_to_snippet(raw_lines: Vec<String>) -> Snippet {
     let mut lines: Vec<Line> = vec![];
     for raw_line in raw_lines {
         if raw_line.starts_with("\u{1b}[m\u{1b}[32m") {
@@ -143,5 +144,5 @@ fn lines_to_snippet(file: &FileRef, raw_lines: Vec<String>) -> Snippet {
             lines.push(parse_line(&raw_line[ln_end + 4..]));
         }
     }
-    Snippet::new(lines, 0, file.clone())
+    Snippet::new(lines, 0)
 }

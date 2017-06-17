@@ -10,14 +10,14 @@
   <body>
     <div class="wrapper">
       <div id="app">
-        <search v-bind:grouped-snippets="groupedSnippets"
+        <search v-bind:search-response="searchResponse"
                 v-bind:projects="projects"
                 v-bind:current-project="currentProject"
                 v-on:search-request="search"
                 v-on:file-request="addFile"
                 v-on:change-project="changeProject"
                 class="container"></search>
-        <files v-bind:snippets="files"
+        <files v-bind:files="files"
                v-on:close-file="closeFile"
                class="container"></files>
       </div>

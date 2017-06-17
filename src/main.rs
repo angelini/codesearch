@@ -14,7 +14,7 @@ extern crate toml;
 mod base;
 mod ripgrep;
 
-use base::{Project, Snippet};
+use base::{FileSnippets, Project};
 use rocket::State;
 use rocket::response::NamedFile;
 use rocket_contrib::JSON;
@@ -23,6 +23,8 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::Read;
 use std::path::{Path, PathBuf};
+
+const RESULT_LIMIT: usize = 100;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Config {
@@ -61,14 +63,47 @@ struct SearchQuery {
     below: Option<usize>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct SearchResponse {
+    file_snippets: Vec<FileSnippets>,
+    truncated: bool,
+}
+
+impl SearchResponse {
+    fn new(mut snippets: Vec<FileSnippets>, limit: usize) -> SearchResponse {
+        snippets.sort_by(|left, right| left.file.path.cmp(&right.file.path));
+        if snippets.len() > limit {
+            let truncated_snippets = snippets.into_iter()
+                .enumerate()
+                .map(|(idx, file_snippets)| {
+                    if idx >= limit {
+                        file_snippets.truncate()
+                    } else {
+                        file_snippets
+                    }
+                })
+                .collect();
+            SearchResponse {
+                file_snippets: truncated_snippets,
+                truncated: true,
+            }
+        } else {
+            SearchResponse {
+                file_snippets: snippets,
+                truncated: false,
+            }
+        }
+    }
+}
+
 #[get("/search/<project>?<query>")]
-fn search(config: State<Config>, project: String, query: SearchQuery) -> io::Result<JSON<Vec<Snippet>>> {
+fn search(config: State<Config>, project: String, query: SearchQuery) -> io::Result<JSON<SearchResponse>> {
     let snippets = ripgrep::search(&config.project_from_name(&project).unwrap(),
                                    &query.query,
                                    &query.file_filter,
                                    query.above.unwrap_or(2),
                                    query.below.unwrap_or(2));
-    Ok(JSON(snippets?))
+    Ok(JSON(SearchResponse::new(snippets?, RESULT_LIMIT)))
 }
 
 #[derive(FromForm)]
@@ -78,7 +113,7 @@ struct FileQuery {
 }
 
 #[get("/file/<project>?<query>")]
-fn file(config: State<Config>, project: String, query: FileQuery) -> io::Result<JSON<Snippet>> {
+fn file(config: State<Config>, project: String, query: FileQuery) -> io::Result<JSON<FileSnippets>> {
     let snippet = ripgrep::file(&config.project_from_name(&project).unwrap(),
                                 &query.query,
                                 &query.file);

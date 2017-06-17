@@ -27,15 +27,11 @@ function idx_xhr_get(idx, uri, success, error) {
 }
 
 Vue.component('source-block', {
-  props: ['snippet'],
+  props: ['snippet', 'extension'],
   computed: {
     code: function() {
       return _.map(this.snippet.lines, (line) => line.full)
         .join('\n');
-    },
-    matches: function() {
-      return _.map(this.snippet.matches, (match) => match)
-        .join(', ');
     }
   },
   data: function() {
@@ -44,6 +40,7 @@ Vue.component('source-block', {
   methods: {
     highlightMatches: function() {
       this.cm.operation(() => {
+        _.each(this.cm.doc.getAllMarks(), (mark) => mark.clear());
         _.each(this.snippet.lines, (line, idx) => {
           _.each(line.matches, (match) => {
             this.cm.doc.markText({line: idx, ch: match[0]},
@@ -60,7 +57,7 @@ Vue.component('source-block', {
       lineNumbers: true,
       firstLineNumber: this.snippet.line_number,
       readOnly: true,
-      mode: MODE_LOOKUP[this.snippet.file.extension],
+      mode: MODE_LOOKUP[this.extension],
     });
     this.cm = cm;
     this.highlightMatches();
@@ -70,7 +67,6 @@ Vue.component('source-block', {
   },
   template: `
 <div class="box-item">
-  <div>{{ matches }}</div>
   <textarea>{{ code }}</textarea>
 </div>
 `
@@ -102,18 +98,13 @@ Vue.component('project-picker', {
 });
 
 Vue.component('search-result-group', {
-  props: ['group', 'expanded'],
-  computed: {
-    file: function() {
-      return this.group[0].file.path;
-    }
-  },
+  props: ['fileSnippets', 'expanded', 'idx'],
   data: function() {
     return {toShow: this.expanded ? 3 : 0};
   },
   methods: {
     emitFile: function() {
-      this.$emit('file-request', this.file);
+      this.$emit('file-request', this.fileSnippets.file.path);
     },
     showMore: function() {
       this.toShow += 3;
@@ -131,12 +122,14 @@ Vue.component('search-result-group', {
   },
   template: `
 <div class="box">
-  <div v-on:click="emitFile" class="box-title">{{ file }}</div>
-  <source-block v-for="(snippet, snippet_idx) in group"
+  <div>{{ idx }}</div>
+  <div v-on:click="emitFile" class="box-title">{{ fileSnippets.file.path }}</div>
+  <source-block v-for="(snippet, snippet_idx) in fileSnippets.snippets"
                 v-if="snippet_idx < toShow"
                 v-bind:snippet="snippet"
+                v-bind:extension="fileSnippets.file.extension"
                 v-bind:key="snippet.hash"></source-block>
-  <div v-if="group.length > toShow"
+  <div v-if="fileSnippets.snippets.length > toShow"
        v-on:click="showMore"
        class="rest">...</div>
 </div>
@@ -144,13 +137,22 @@ Vue.component('search-result-group', {
 });
 
 Vue.component('search', {
-  props: ['groupedSnippets', 'projects', 'currentProject'],
+  props: ['searchResponse', 'projects', 'currentProject'],
+  computed: {
+    fileCount: function() {
+      return _.size(this.searchResponse.file_snippets);
+    },
+    matchCount: function() {
+      return _.reduce(this.searchResponse.file_snippets,
+                      (acc, snippets) => acc + snippets.match_count,
+                      0);
+    }
+  },
   data: function() {
     return {showProjectPicker: false};
   },
   methods: {
     emitSearch: function(event) {
-      console.log('key', event.key);
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Control', 'Meta', 'Shift'].includes(event.key)) {
         return;
       }
@@ -180,28 +182,30 @@ Vue.component('search', {
       <input v-on:keyup="emitSearch"
              type="text"
              class="search-input">
+      <span>{{ matchCount }}</span>
     </div>
     <div>
       <div class="project-toggle"></div>
       <span class="label grey">file filter</span>
       <input v-on:keyup="emitSearch"
              type="text">
+      <span>{{ fileCount }}</span>
     </div>
     <project-picker v-if="showProjectPicker"
                     v-bind:projects="projects"
                     v-on:change-project="changeProject"></project-picker>
   </header>
-  <search-result-group v-for="(group, group_idx) in groupedSnippets"
-                       v-bind:key="group[0].file.path"
-                       v-bind:group="group"
-                       v-bind:expanded="group_idx < 10"
+  <search-result-group v-for="(fileSnippets, idx) in searchResponse.file_snippets"
+                       v-bind:key="fileSnippets.file.path"
+                       v-bind:file-snippets="fileSnippets"
+                       v-bind:expanded="idx < 10"
                        v-on:file-request="emitFile"></search-result-group>
 </div>
 `
 });
 
 Vue.component('files', {
-  props: ['snippets'],
+  props: ['files'],
   data: function() {
     return {selected: '', seen: []};
   },
@@ -210,6 +214,9 @@ Vue.component('files', {
       return _.last(file_path.split('/'));
     },
     openFile: function(event) {
+      if (event.target.innerText == 'x') {
+        return;
+      }
       this.selected = event.currentTarget
         .querySelectorAll('span')[1]
         .dataset
@@ -224,37 +231,34 @@ Vue.component('files', {
     }
   },
   watch: {
-    snippets: function() {
-      let files = _.keys(this.snippets);
+    files: function() {
+      let files = _.keys(this.files);
       let last = _.last(files);
-      if (this.selected == "" && _.size(this.snippets) > 0) {
+      if (this.selected == "" && files.length > 0
+          || !_.contains(this.seen, last)
+          || !_.contains(files, this.selected)) {
         this.selected = last;
       }
-      if (!_.contains(this.seen, last)) {
-        this.selected = last;
-      }
-      if (!_.contains(files, this.selected)) {
-        this.selected = last;
-      }
-      this.seen = _.keys(this.snippets);
+      this.seen = _.keys(this.fileSnippets);
     }
   },
   template: `
 <div>
   <header class="tags">
-    <div v-for="(_, file) in snippets"
+    <div v-for="(_, file) in files"
          v-bind:key="file"
          v-bind:class="file == selected ? 'selected' : ''"
          v-on:click="openFile">
       <span class="close" v-on:click="closeFile">x</span><span v-bind:data-path="file">{{ basename(file) }}</span>
     </div>
   </header>
-  <div v-for="snippet in snippets"
-       v-if="snippet.file.path == selected"
-       v-bind:key="snippet.hash"
+  <div v-for="(file_snippets, file) in files"
+       v-if="file == selected"
+       v-bind:key="file_snippets.snippets[0].hash"
        class="box">
     <div class="box-title"></div>
-    <source-block v-bind:snippet="snippet"></source-block>
+    <source-block v-bind:snippet="file_snippets.snippets[0]"
+                  v-bind:extension="file_snippets.file.extension"></source-block>
   </div>
 </div>`
 });
@@ -271,17 +275,6 @@ function buildFileURI(project, file, query) {
     '&query=' + encodeURIComponent(query);
 }
 
-function groupSnippets(snippets) {
-  return _.chain(snippets)
-    .groupBy((snippet) => snippet.file.path)
-    .mapObject((snippets) => {
-      return _.sortBy(snippets, (s) => s.line_number);
-    })
-    .values()
-    .sortBy((group) => group[0].file.path)
-    .value();
-}
-
 let app = new Vue({
   el: '#app',
   data: {
@@ -290,7 +283,7 @@ let app = new Vue({
     currentProject: null,
     projects: [],
     files: {},
-    groupedSnippets: {},
+    searchResponse: {file_snippets: [], truncated: false},
     requestIndexes: {search: 0, file: 0},
   },
   methods: {
@@ -305,9 +298,9 @@ let app = new Vue({
       }
 
       idx_xhr_get(app.nextId('search'), buildSearchURI(app.currentProject, query, fileFilter),
-              (idx, results) => {
+              (idx, response) => {
                 if (idx == app.requestIndexes.search) {
-                  app.groupedSnippets = groupSnippets(results);
+                  app.searchResponse = response;
                   app.requestIndexes.search = idx;
                 }
               },
@@ -315,13 +308,15 @@ let app = new Vue({
 
       _.each(_.keys(app.files), (file) => {
         xhr_get(buildFileURI(app.currentProject, file, query),
-                (snippet) => app.$set(app.files, file, snippet),
+                (file_snippets) => app.$set(app.files, file, file_snippets),
                 (status) => console.error('file', status));
       });
     },
     addFile: function(file) {
       xhr_get(buildFileURI(app.currentProject, file, app.query),
-              (snippet) => app.$set(app.files, file, snippet),
+              (file_snippets) => {
+                app.$set(app.files, file, file_snippets);
+              },
               (status) => console.error('file', status));
     },
     closeFile: function(file) {
@@ -330,7 +325,7 @@ let app = new Vue({
     changeProject: function(project) {
       app.currentProject = project;
       app.files = {};
-      app.groupedSnippets = {};
+      app.searchResponse = {file_snippets: [], truncated: false};
       if (app.query != '') {
         app.search(app.query, app.fileFilter);
       }
