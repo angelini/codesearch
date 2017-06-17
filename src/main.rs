@@ -56,6 +56,7 @@ fn read_config(path: &Path) -> Result<Config, io::Error> {
 #[derive(FromForm)]
 struct SearchQuery {
     query: String,
+    file_filter: String,
     above: Option<usize>,
     below: Option<usize>,
 }
@@ -64,6 +65,7 @@ struct SearchQuery {
 fn search(config: State<Config>, project: String, query: SearchQuery) -> io::Result<JSON<Vec<Snippet>>> {
     let snippets = ripgrep::search(&config.project_from_name(&project).unwrap(),
                                    &query.query,
+                                   &query.file_filter,
                                    query.above.unwrap_or(2),
                                    query.below.unwrap_or(2));
     Ok(JSON(snippets?))
