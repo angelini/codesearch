@@ -41,6 +41,19 @@ Vue.component('source-block', {
   data: function() {
     return {cm: null};
   },
+  methods: {
+    highlightMatches: function() {
+      this.cm.operation(() => {
+        _.each(this.snippet.lines, (line, idx) => {
+          _.each(line.matches, (match) => {
+            this.cm.doc.markText({line: idx, ch: match[0]},
+                                 {line: idx, ch: match[1]},
+                                 {className: 'highlight'});
+          });
+        });
+      });
+    }
+  },
   mounted: function() {
     let line_number = this.snippet.line_number;
     let cm = CodeMirror.fromTextArea(this.$el.querySelector('textarea'), {
@@ -49,24 +62,11 @@ Vue.component('source-block', {
       readOnly: true,
       mode: MODE_LOOKUP[this.snippet.file.extension],
     });
-    _.each(this.snippet.lines, (line, idx) => {
-      _.each(line.matches, (match) => {
-        cm.doc.markText({line: idx, ch: match[0]},
-                        {line: idx, ch: match[1]},
-                        {className: 'highlight'});
-      });
-    });
     this.cm = cm;
+    this.highlightMatches();
   },
   updated: function() {
-    _.each(this.cm.doc.getAllMarks(), (mark) => mark.clear());
-    _.each(this.snippet.lines, (line, idx) => {
-      _.each(line.matches, (match) => {
-        this.cm.doc.markText({line: idx, ch: match[0]},
-                             {line: idx, ch: match[1]},
-                             {className: 'highlight'});
-      });
-    });
+    this.highlightMatches();
   },
   template: `
 <div class="box-item">
@@ -150,7 +150,8 @@ Vue.component('search', {
   },
   methods: {
     emitSearch: function(event) {
-      if (['Control', 'Meta', 'Shift'].includes(event.key)) {
+      console.log('key', event.key);
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Control', 'Meta', 'Shift'].includes(event.key)) {
         return;
       }
       let inputs = this.$el.querySelectorAll('input');
