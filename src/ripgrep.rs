@@ -8,13 +8,19 @@ use std::str;
 
 pub fn search(project: &Project,
               query: &str,
+              file_filter: &str,
               above: usize,
               below: usize)
               -> Result<Vec<Snippet>, io::Error> {
     Ok(lines_to_snippets(project,
-                      rg_command(project,
-                                 query,
-                                 &["-A", &above.to_string(), "-B", &below.to_string()])?))
+                         rg_command(project,
+                                    query,
+                                    &["-g",
+                                      file_filter,
+                                      "-A",
+                                      &above.to_string(),
+                                      "-B",
+                                      &below.to_string()])?))
 }
 
 pub fn file(project: &Project, query: &str, file: &str) -> io::Result<Snippet> {

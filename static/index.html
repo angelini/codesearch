@@ -18,6 +18,7 @@
                 v-on:change-project="changeProject"
                 class="container"></search>
         <files v-bind:snippets="files"
+               v-on:close-file="closeFile"
                class="container"></files>
       </div>
     </div>

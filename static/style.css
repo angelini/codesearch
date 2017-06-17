@@ -43,26 +43,6 @@ input[type="text"]:focus {
   width: 100%;
 }
 
-.container {
-  flex-grow: 1;
-  overflow-y: auto;
-  width: 50%;
-}
-
-.container header {
-  background-color: white;
-  border-bottom: 2px solid var(--grey);
-  height: 2em;
-  padding: 0.6em 0.6em;
-  position: fixed;
-  width: 100%;
-  z-index: 100;
-}
-
-.container .box:nth-child(2) {
-  margin-top: 3.8em;
-}
-
 .box {
   background-color: var(--beige);
   outline: 1px solid var(--grey);
@@ -87,10 +67,63 @@ input[type="text"]:focus {
   padding: 0.2em 0.5em 0.5em 0.5em
 }
 
+.container {
+  flex-grow: 1;
+  overflow-y: auto;
+  width: 50%;
+}
+
+.container header {
+  background-color: white;
+  border-bottom: 2px solid var(--grey);
+  height: 4.8em;
+  padding: 0.6em 0.6em;
+  position: fixed;
+  width: 50%;
+  z-index: 100;
+}
+
+.container header span.label {
+  display: inline-block;
+  font-size: 18px;
+  font-style: italic;
+  width: 15%;
+}
+
+.container header input[type=text] {
+  font-size: 16px;
+  margin-left: 1em;
+  padding: 0.2em;
+  width: 40%;
+}
+
+.container .box:nth-child(2) {
+  margin-top: 7em;
+}
+
+.close {
+  color: var(--red);
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 4px;
+  vertical-align: top;
+}
+
+.depth-1 {
+  margin-left: 0.5em;
+}
+
+.depth-2 {
+  margin-left: 0.5em;
+}
+
+.depth-3 {
+  margin-left: 3.5em;
+}
+
 .dropdown {
   background-color: white;
   outline: 1px solid var(--grey);
-  width: 45%;
   z-index: 100;
 }
 
@@ -121,28 +154,21 @@ input[type="text"]:focus {
   display: inline-block;
 }
 
+.grey {
+  color: var(--grey);
+}
+
 .highlight {
   background-color: var(--yellow);
 }
 
-.italic {
-  font-size: 18px;
-  font-style: italic;
-}
-
 .project-toggle {
   cursor: pointer;
+  display: inline-block;
   font-size: 19px;
   height: 32px;
   margin-right: 0.2em;
   width: 30px;
-}
-
-input.search-input {
-  font-size: 16px;
-  margin-left: 1em;
-  padding: 0.2em;
-  width: 30%;
 }
 
 .tags {
@@ -151,8 +177,9 @@ input.search-input {
 }
 
 .tags > div {
-  outline: 1px solid var(--grey);
+  height: 1.5em;
   margin-right: 0.5em;
+  outline: 1px solid var(--grey);
   padding: 0.5em;
 }
 

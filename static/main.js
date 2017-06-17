@@ -153,7 +153,8 @@ Vue.component('search', {
       if (['Control', 'Meta', 'Shift'].includes(event.key)) {
         return;
       }
-      this.$emit('search-request', this.$el.querySelector('input').value);
+      let inputs = this.$el.querySelectorAll('input');
+      this.$emit('search-request', inputs[0].value, inputs[1].value);
     },
     emitFile: function(file) {
       this.$emit('file-request', file);
@@ -171,12 +172,20 @@ Vue.component('search', {
   template: `
 <div>
   <header>
-    <button v-on:click="toggleProjectPicker"
-            class="project-toggle">></button>
-    <span class="italic">{{ currentProject }}</span>
-    <input v-on:keyup="emitSearch"
-           type="text"
-           class="search-input">
+    <div>
+      <button v-on:click="toggleProjectPicker"
+              class="project-toggle">></button>
+      <span class="label">{{ currentProject }}</span>
+      <input v-on:keyup="emitSearch"
+             type="text"
+             class="search-input">
+    </div>
+    <div>
+      <div class="project-toggle"></div>
+      <span class="label grey">file filter</span>
+      <input v-on:keyup="emitSearch"
+             type="text">
+    </div>
     <project-picker v-if="showProjectPicker"
                     v-bind:projects="projects"
                     v-on:change-project="changeProject"></project-picker>
@@ -193,11 +202,24 @@ Vue.component('search', {
 Vue.component('files', {
   props: ['snippets'],
   data: function() {
-    return {selected: "", seen: []};
+    return {selected: '', seen: []};
   },
   methods: {
+    basename: function(file_path) {
+      return _.last(file_path.split('/'));
+    },
     openFile: function(event) {
-      this.selected = event.target.innerText;
+      this.selected = event.currentTarget
+        .querySelectorAll('span')[1]
+        .dataset
+        .path;
+    },
+    closeFile: function(event) {
+      let file = event.currentTarget.parentElement
+          .querySelectorAll('span')[1]
+          .dataset
+          .path;
+      this.$emit('close-file', file);
     }
   },
   watch: {
@@ -210,6 +232,9 @@ Vue.component('files', {
       if (!_.contains(this.seen, last)) {
         this.selected = last;
       }
+      if (!_.contains(files, this.selected)) {
+        this.selected = last;
+      }
       this.seen = _.keys(this.snippets);
     }
   },
@@ -219,7 +244,9 @@ Vue.component('files', {
     <div v-for="(_, file) in snippets"
          v-bind:key="file"
          v-bind:class="file == selected ? 'selected' : ''"
-         v-on:click="openFile">{{ file }}</div>
+         v-on:click="openFile">
+      <span class="close" v-on:click="closeFile">x</span><span v-bind:data-path="file">{{ basename(file) }}</span>
+    </div>
   </header>
   <div v-for="snippet in snippets"
        v-if="snippet.file.path == selected"
@@ -231,9 +258,10 @@ Vue.component('files', {
 </div>`
 });
 
-function buildSearchURI(project, query) {
+function buildSearchURI(project, query, fileFilter) {
   return 'search/' + project +
-    '?query=' + encodeURIComponent(query);
+    '?query=' + encodeURIComponent(query) +
+    '&file_filter=' + encodeURIComponent(fileFilter);
 }
 
 function buildFileURI(project, file, query) {
@@ -257,6 +285,7 @@ let app = new Vue({
   el: '#app',
   data: {
     query: '',
+    fileFilter: '',
     currentProject: null,
     projects: [],
     files: {},
@@ -267,12 +296,14 @@ let app = new Vue({
     nextId: function(key) {
       return this.requestIndexes[key] += 1;
     },
-    search: function(query) {
+    search: function(query, fileFilter) {
       app.query = query;
+      app.fileFilter = fileFilter;
       if (query.length < 3) {
         return;
       }
-      idx_xhr_get(app.nextId('search'), buildSearchURI(app.currentProject, query),
+
+      idx_xhr_get(app.nextId('search'), buildSearchURI(app.currentProject, query, fileFilter),
               (idx, results) => {
                 if (idx == app.requestIndexes.search) {
                   app.groupedSnippets = groupSnippets(results);
@@ -292,12 +323,15 @@ let app = new Vue({
               (snippet) => app.$set(app.files, file, snippet),
               (status) => console.error('file', status));
     },
+    closeFile: function(file) {
+      app.$delete(app.files, file);
+    },
     changeProject: function(project) {
       app.currentProject = project;
       app.files = {};
       app.groupedSnippets = {};
       if (app.query != '') {
-        app.search(app.query);
+        app.search(app.query, app.fileFilter);
       }
       localStorage.setItem('project', project);
     }
