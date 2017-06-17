@@ -1,4 +1,5 @@
 [projects]
 codesearch = "/Users/alexangelini/src/github.com/angelini/codesearch"
 starscream = "/Users/alexangelini/src/github.com/Shopify/starscream/starscream"
+starscream_jobs = "/Users/alexangelini/src/github.com/Shopify/starscream/shopify"
 spark = "/Users/alexangelini/src/github.com/apache/spark"

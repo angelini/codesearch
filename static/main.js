@@ -33,45 +33,43 @@ Vue.component('source-block', {
       return _.map(this.snippet.lines, (line) => line.full)
         .join('\n');
     },
-    matches: function() {
-      return _.map(this.snippet.matches, (match) => match)
-        .join(', ');
-    }
   },
   data: function() {
     return {cm: null};
   },
   mounted: function() {
-    let line_number = this.snippet.line_number;
-    let cm = CodeMirror.fromTextArea(this.$el.querySelector('textarea'), {
-      lineNumbers: true,
-      firstLineNumber: this.snippet.line_number,
-      readOnly: true,
-      mode: MODE_LOOKUP[this.snippet.file.extension],
-    });
-    _.each(this.snippet.lines, (line, idx) => {
-      _.each(line.matches, (match) => {
-        cm.doc.markText({line: idx, ch: match[0]},
-                        {line: idx, ch: match[1]},
-                        {className: 'highlight'});
-      });
-    });
-    this.cm = cm;
+    hljs.highlightBlock(this.$el.querySelector('code'));
+    // let line_number = this.snippet.line_number;
+    // let cm = CodeMirror.fromTextArea(this.$el.querySelector('textarea'), {
+    //   lineNumbers: true,
+    //   firstLineNumber: this.snippet.line_number,
+    //   readOnly: true,
+    //   mode: MODE_LOOKUP[this.snippet.file.extension],
+    // });
+    // _.each(this.snippet.lines, (line, idx) => {
+    //   _.each(line.matches, (match) => {
+    //     cm.doc.markText({line: idx, ch: match[0]},
+    //                     {line: idx, ch: match[1]},
+    //                     {className: 'highlight'});
+    //   });
+    // });
+    // this.cm = cm;
   },
   updated: function() {
-    _.each(this.cm.doc.getAllMarks(), (mark) => mark.clear());
-    _.each(this.snippet.lines, (line, idx) => {
-      _.each(line.matches, (match) => {
-        this.cm.doc.markText({line: idx, ch: match[0]},
-                             {line: idx, ch: match[1]},
-                             {className: 'highlight'});
-      });
-    });
+    hljs.highlightBlock(this.$el.querySelector('code'));
+    // _.each(this.cm.doc.getAllMarks(), (mark) => mark.clear());
+    // _.each(this.snippet.lines, (line, idx) => {
+    //   _.each(line.matches, (match) => {
+    //     this.cm.doc.markText({line: idx, ch: match[0]},
+    //                          {line: idx, ch: match[1]},
+    //                          {className: 'highlight'});
+    //   });
+    // });
   },
   template: `
 <div class="box-item">
-  <div>{{ matches }}</div>
-  <textarea>{{ code }}</textarea>
+  <pre><code>{{ code }}</code></pre>
+  <!-- <textarea>{{ code }}</textarea> -->
 </div>
 `
 });
@@ -143,8 +141,61 @@ Vue.component('search-result-group', {
 `
 });
 
+const FOLDER_DEPTH = 2;
+
+function buildFolderTree(files, depth) {
+  if (depth == FOLDER_DEPTH) {
+    return {};
+  }
+
+  let folders = {};
+  for (let file of files) {
+    let slash_idx = file.indexOf('/');
+    if (slash_idx == -1) continue;
+
+    let folder = file.slice(0, slash_idx);
+    if (!(folder in folders)) {
+      folders[folder] = [];
+    }
+    folders[folder].push(file.slice(slash_idx + 1));
+  }
+
+  return _.mapObject(folders, (val, key) => buildFolderTree(val, depth + 1));
+}
+
+Vue.component('folder-tree', {
+  props: ['files'],
+  computed: {
+    tree: function() {
+      console.log('files', this.files);
+      return buildFolderTree(this.files, 0);
+    }
+  },
+  template: `
+<div class="box">
+  <div v-for="(subfolders, folder) in tree"
+       v-bind:key="folder">
+    <span class="depth-1">{{ folder }}</span>
+    <div v-for="(subfolders, folder) in subfolders"
+         v-bind:key="folder">
+      <span class="depth-2">└── {{ folder }}</span>
+      <div v-for="(subfolders, folder) in subfolders"
+           v-bind:key="folder">
+        <span class="depth-3">└── {{ folder }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+`
+});
+
 Vue.component('search', {
   props: ['groupedSnippets', 'projects', 'currentProject'],
+  computed: {
+    files: function() {
+      return _.map(this.groupedSnippets, (group) => group[0].file.path);
+    }
+  },
   data: function() {
     return {showProjectPicker: false};
   },
@@ -193,7 +244,7 @@ Vue.component('search', {
   <search-result-group v-for="(group, group_idx) in groupedSnippets"
                        v-bind:key="group[0].file.path"
                        v-bind:group="group"
-                       v-bind:expanded="group_idx < 10"
+                       v-bind:expanded="group_idx < 100"
                        v-on:file-request="emitFile"></search-result-group>
 </div>
 `

@@ -1,0 +1,9 @@
+click on search result and scroll file to that line
+
+add file filter box
+
+add file tree
+
+add error handling to ripgrep.rs
+
+close file tabs
